@@ -1,0 +1,12 @@
+@"
+# Crucible System Execution Rules
+
+- Always generate minimal surgical diffs targeting only the failing statement.
+- Never rewrite whole files or alter formatting of passing logic.
+- Ignore build artifacts, .git, venv, and node_modules.
+- Never hardcode a target repository path in this file or in any mode/rule file - the target is always passed as a parameter (--target flag) to scripts/run_heal.py.
+- Output clean summaries adhering strictly to:
+  [TRIAGE]: File, Line, and Error Root Cause
+  [PATCH]: Explanation of the surgical change
+  [VERIFICATION]: Command to execute for validation and its result
+"@ | Out-File -Encoding utf8 .bobrules
