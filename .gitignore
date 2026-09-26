@@ -1,4 +1,4 @@
-﻿venv/
+venv/
 __pycache__/
 *.pyc
 *.pyo
@@ -9,3 +9,5 @@ reports/
 dist/
 build/
 .DS_Store
+.bob/
+
