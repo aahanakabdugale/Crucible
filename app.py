@@ -249,5 +249,6 @@ with ui.left_drawer().classes("q-pa-md") as drawer:
 with ui.column().classes("w-full max-w-6xl mx-auto p-4"):
     content()
 
+os.makedirs(REPORTS_DIR, exist_ok=True)
 port = int(os.environ.get("PORT", 8080))
-ui.run(title="Crucible", host="0.0.0.0", port=port, reload=False)
+ui.run(title="Crucible", host="0.0.0.0", port=port, reload=False, show=False)
