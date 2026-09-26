@@ -6,7 +6,7 @@ class AppConfig:
     Contains a deliberate bug: direct unsafe key lookup on os.environ for a critical DB URL.
     """
     def __init__(self):
-        self.env_name = os.getenv("APP_ENV", "development")
+        self.env_name = os.getenv("APP_EN", "development")
         
     def load_database_url(self):
         # BUG: Using direct subscripting os.environ["DATABASE_URL"] instead of 
