@@ -8,9 +8,9 @@
 #   2. If tests pass  → report success, done.
 #   3. If tests fail  → invoke Crucible (run_heal.py) to triage + patch.
 #   4. If Crucible's patch makes tests pass:
-#        - Create a new branch:  crucible/auto-fix-<run-number>
-#        - Commit the patched file(s) with a clear message
-#        - Push the branch (NEVER commits to the triggering branch or main)
+#       - Create a new branch:  crucible/auto-fix-<run-number>
+#       - Commit the patched file(s) with a clear message
+#       - Push the branch (NEVER commits to the triggering branch or main)
 #   5. If Crucible's patch still fails → log triage output and fail the job.
 # =============================================================================
 
@@ -46,12 +46,13 @@ jobs:
           fetch-depth: 0
 
       # -----------------------------------------------------------------------
-      # 2. Set up Python 3.12 (matches local venv)
+      # 2. Set up Python 3.12 (matches local venv with pip caching enabled)
       # -----------------------------------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip' # Caches dependencies to make subsequent runs much faster
 
       # -----------------------------------------------------------------------
       # 3. Install dependencies
@@ -165,4 +166,3 @@ jobs:
           cat heal_output.txt || true
           exit 1
         shell: bash
-      
