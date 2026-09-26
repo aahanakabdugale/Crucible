@@ -67,7 +67,6 @@ Crucible/
 ├── reports/                   ← Runtime scratchpad (gitignored): heal JSON outputs
 ├── bob_sessions/              ← Hackathon evidence screenshots
 ├── AGENTS.md                  ← Bob IDE project context
-├── PRD.md                     ← Product requirements
 └── .bobrules                  ← Bob agent rules (surgical diffs only, no hardcoded paths)
 ```
 
