@@ -20,7 +20,8 @@ on:
   push:
     branches:
       - "**"   # every branch, including feature branches and PRs
-
+    workflow_dispatch:
+    
 permissions:
   contents: write   # needed to push the auto-fix branch back to the repo
 
@@ -164,6 +165,4 @@ jobs:
           cat heal_output.txt || true
           exit 1
         shell: bash
-      on:
-        push:
-          workflow_dispatch:
+      
