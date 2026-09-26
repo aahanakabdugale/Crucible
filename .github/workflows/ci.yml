@@ -164,3 +164,6 @@ jobs:
           cat heal_output.txt || true
           exit 1
         shell: bash
+      on:
+        push:
+          workflow_dispatch:
