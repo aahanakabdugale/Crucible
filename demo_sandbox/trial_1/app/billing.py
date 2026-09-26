@@ -4,8 +4,8 @@ class BillingService:
 
         # BUG: accessing 'tax_rate' directly instead of the correct key
         # Real payload provides 'tax_pct' as a float (e.g. 0.08)
-        tax_rate = order_data["tax_rate"]
+        tax_rate = order_data["tax_pct"]
 
-        tax_amount = subtotal * tax_rate
-        total = subtotal + tax_amount
+        tax_eamount = subtotal * tax_rate
+        total = subtotal + tax_eamount
         return round(total, 2)

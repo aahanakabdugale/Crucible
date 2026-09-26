@@ -1,0 +1,166 @@
+# =============================================================================
+# Crucible CI — Self-Healing Pipeline
+#
+# Triggers on every push to any branch.
+#
+# Flow:
+#   1. Run pytest on the full demo_sandbox suite.
+#   2. If tests pass  → report success, done.
+#   3. If tests fail  → invoke Crucible (run_heal.py) to triage + patch.
+#   4. If Crucible's patch makes tests pass:
+#        - Create a new branch:  crucible/auto-fix-<run-number>
+#        - Commit the patched file(s) with a clear message
+#        - Push the branch (NEVER commits to the triggering branch or main)
+#   5. If Crucible's patch still fails → log triage output and fail the job.
+# =============================================================================
+
+name: Crucible CI
+
+on:
+  push:
+    branches:
+      - "**"   # every branch, including feature branches and PRs
+
+permissions:
+  contents: write   # needed to push the auto-fix branch back to the repo
+
+jobs:
+  test-and-heal:
+    name: Test → Heal (if needed)
+    runs-on: ubuntu-latest
+
+    # Gemini API key is stored as a GitHub secret (GEMINI_API_KEY).
+    # run_heal.py reads the key from GOOGLE_API_KEY — mapped here.
+    env:
+      GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # fetch-depth 0 gives us the full history so we can create branches
+          fetch-depth: 0
+
+      # -----------------------------------------------------------------------
+      # 2. Set up Python 3.12 (matches local venv)
+      # -----------------------------------------------------------------------
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # -----------------------------------------------------------------------
+      # 3. Install dependencies
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest google-genai python-dotenv
+
+      # -----------------------------------------------------------------------
+      # 4. Run pytest — capture result without failing the job immediately
+      # -----------------------------------------------------------------------
+      - name: Run pytest
+        id: pytest
+        run: |
+          # Run pytest; store exit code for the conditional step below.
+          # '|| true' prevents the step from hard-failing so we can branch on outcome.
+          python -m pytest demo_sandbox/ -v 2>&1 | tee pytest_output.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      # -----------------------------------------------------------------------
+      # 5a. Tests passed — report success and stop
+      # -----------------------------------------------------------------------
+      - name: Tests passed — nothing to heal
+        if: steps.pytest.outputs.exit_code == '0'
+        run: echo "All tests passed. Crucible has nothing to do."
+
+      # -----------------------------------------------------------------------
+      # 5b. Tests failed — invoke Crucible healer
+      # -----------------------------------------------------------------------
+      - name: Tests failed — invoking Crucible healer
+        if: steps.pytest.outputs.exit_code != '0'
+        id: heal
+        run: |
+          echo "::group::Crucible triage + patch output"
+
+          # Detect which trial directory has the failing test by probing each target.
+          HEAL_EXIT=1
+
+          for TARGET in demo_sandbox/trial_1 demo_sandbox/trial_2 demo_sandbox/trial_3; do
+            echo ""
+            echo "--- Checking target: $TARGET ---"
+            python -m pytest "$TARGET" -v --tb=no -q 2>&1 | tail -5
+            TARGET_EXIT=${PIPESTATUS[0]}
+            if [ "$TARGET_EXIT" -ne 0 ]; then
+              echo "Failing target identified: $TARGET"
+              echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+
+              # Run Crucible — exit 0 = healed, exit 1 = unresolved
+              python scripts/run_heal.py --target "$TARGET" 2>&1 | tee heal_output.txt
+              HEAL_EXIT=${PIPESTATUS[0]}
+              echo "heal_exit=$HEAL_EXIT" >> "$GITHUB_OUTPUT"
+              break
+            fi
+          done
+
+          echo "::endgroup::"
+
+          # Surface the triage summary line in the CI summary
+          grep "\[TRIAGE\]" heal_output.txt | head -5 || true
+
+          exit $HEAL_EXIT
+        shell: bash
+
+      # -----------------------------------------------------------------------
+      # 5c. Crucible patch verified — commit + push to a new auto-fix branch
+      # -----------------------------------------------------------------------
+      - name: Commit Crucible patch to auto-fix branch
+        if: steps.pytest.outputs.exit_code != '0' && steps.heal.outputs.heal_exit == '0'
+        run: |
+          # Build branch name: crucible/auto-fix-<run-number>
+          FIX_BRANCH="crucible/auto-fix-${{ github.run_number }}"
+
+          # Extract the 1-line triage summary from the heal log
+          TRIAGE_LINE=$(grep "\[TRIAGE\]" heal_output.txt | head -1 | sed 's/\[TRIAGE\] //')
+          COMMIT_MSG="Crucible auto-fix: ${TRIAGE_LINE:-patched by Crucible healer}"
+
+          # Configure git identity for the commit
+          git config user.name  "Crucible Bot"
+          git config user.email "crucible-bot@users.noreply.github.com"
+
+          # Create and switch to the new fix branch from current HEAD
+          git checkout -b "$FIX_BRANCH"
+
+          # Stage only modified source files (never stage test files)
+          git add demo_sandbox/
+
+          # Commit if there are staged changes
+          if git diff --cached --quiet; then
+            echo "No file changes to commit — patch was already clean."
+          else
+            git commit -m "$COMMIT_MSG"
+            git push origin "$FIX_BRANCH"
+            echo ""
+            echo "Auto-fix branch pushed: $FIX_BRANCH"
+            echo "Commit: $COMMIT_MSG"
+          fi
+        shell: bash
+
+      # -----------------------------------------------------------------------
+      # 5d. Crucible could NOT heal — log and fail the job
+      # -----------------------------------------------------------------------
+      - name: Crucible could not heal — see logs above
+        if: steps.pytest.outputs.exit_code != '0' && steps.heal.outputs.heal_exit != '0'
+        run: |
+          echo "::error::Crucible attempted a patch but verification still failed."
+          echo "See the 'Crucible triage + patch output' group above for details."
+          echo ""
+          echo "=== Attempted patch output ==="
+          cat heal_output.txt || true
+          exit 1
+        shell: bash

@@ -1,5 +1,5 @@
 import pytest
-from demo_sandbox.app.billing import BillingService
+from demo_sandbox.trial_1.app.billing import BillingService
 
 def test_calculate_invoice_standard():
     service = BillingService()
