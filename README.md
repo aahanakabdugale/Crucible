@@ -4,7 +4,7 @@
 
 ---
 
-PORT-https://crucible-production-e338.up.railway.app/
+PORT-https://crucible.up.railway.app/
 
 ## What It Does
 
