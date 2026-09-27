@@ -18,10 +18,10 @@ name: Crucible CI
 
 on:
   push:
-    branches:
-      - "**"   # every branch, including feature branches and PRs
-    workflow_dispatch:
-    
+    paths:
+      - 'demo_sandbox/**'   # Only run when trial source/test files change
+  workflow_dispatch:        # Keep manual trigger for demo purposes
+
 permissions:
   contents: write   # needed to push the auto-fix branch back to the repo
 
