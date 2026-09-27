@@ -1,5 +1,9 @@
 # Crucible — Autonomous CI/CD Self-Healing Agent
 
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![AI-Powered](https://img.shields.io/badge/AI-Google%20Gemini%202.5%20Flash-orange.svg)](https://deepmind.google/technologies/gemini/)
+
 > **Triage → Patch → Verify.** Crucible ingests a test failure, isolates the root cause, generates a surgical fix using Gemini AI, and re-runs verification — entirely without human intervention.
 
 ---
@@ -258,3 +262,9 @@ Each file in `reports/` follows this schema:
 - **Full-spectrum healing** — one Gemini call covers crashes, silent bugs, and contract violations simultaneously
 - **No external DB** — reports are plain JSON files on disk
 - **Offline-capable** — dashboard reads from `reports/` directly, no network needed to view past results
+
+---
+
+## License
+
+Crucible is open-source software licensed under the **[Apache License 2.0](LICENSE)**.
