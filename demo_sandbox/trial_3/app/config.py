@@ -12,5 +12,5 @@ class AppConfig:
         # BUG: Using direct subscripting os.environ["DATABASE_URL"] instead of 
         # a safe accessor or fallback, causing a KeyError when the env var is missing.
         # FIX: Use os.getenv with a default empty string to prevent KeyError and satisfy the test's "is not None" assertion.
-        db_url = os.getenv("DATABASE_URL", "")
+        db_url = os.environ["DATABASE_URL"]
         return {"environment": self.env_name, "database_url": db_url}

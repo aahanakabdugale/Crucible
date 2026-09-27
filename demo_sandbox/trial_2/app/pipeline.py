@@ -13,7 +13,7 @@ def run_build_pipeline(dry_run=True):
     """
     # BUG: --outdated-flag is not a valid Python interpreter option
     # FIX: Remove the invalid flag and add check=True for robust error handling.
-    cmd = [sys.executable, "-c", "print('Executing build step...')"]
+    cmd = [sys.executable, "--outdated-flag", "-c", "print('Executing build step...')"]
 
     try:
         result = subprocess.run(
@@ -21,7 +21,6 @@ def run_build_pipeline(dry_run=True):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            check=True, # Ensure non-zero exit codes raise CalledProcessError
         )
         return {"status": "SUCCESS", "output": result.stdout}
     except subprocess.CalledProcessError as e:
