@@ -117,9 +117,11 @@ def content():
     with ui.tab_panels(tabs, value=t_triage).classes("w-full"):
         with ui.tab_panel(t_triage):
             triage = r.get("triage") or {}
+            # Real heal reports use 'raw'; demo reports use 'result'
+            triage_text = triage.get("raw") or triage.get("result") or "No triage data available."
             with ui.card().classes("w-full border-l-4 border-primary"):
                 ui.label("ROOT CAUSE").classes("text-xs text-gray-500")
-                ui.label(triage.get("result", "—")).classes("text-base mt-1")
+                ui.label(triage_text).classes("text-base mt-1")
                 ui.label(f"Target: {r.get('target', '—')}").classes("text-sm text-gray-500 mt-2")
 
         with ui.tab_panel(t_patch):
@@ -128,13 +130,13 @@ def content():
                 with ui.card().classes("w-full"):
                     ui.label("No patch was generated for this run.").classes("text-gray-500")
             elif "original" in patch and "patched" in patch:
-                with ui.row().classes("w-full gap-4"):
-                    with ui.card().classes("flex-1"):
+                with ui.column().classes("w-full gap-4"):
+                    with ui.card().classes("w-full"):
                         ui.label("ORIGINAL").classes("text-xs text-gray-500")
-                        ui.code(patch.get("original", "—")).classes("w-full")
-                    with ui.card().classes("flex-1"):
+                        ui.code(patch.get("original", "")).classes("w-full")
+                    with ui.card().classes("w-full"):
                         ui.label("PATCHED").classes("text-xs text-gray-500")
-                        ui.code(patch.get("patched", "—")).classes("w-full")
+                        ui.code(patch.get("patched", "")).classes("w-full")
             else:
                 with ui.card().classes("w-full"):
                     ui.label("PATCH DETAILS").classes("text-xs text-gray-500")
@@ -142,15 +144,16 @@ def content():
 
         with ui.tab_panel(t_verify):
             verification = r.get("verification") or {}
-            with ui.row().classes("w-full gap-4"):
-                with ui.card():
+            with ui.column().classes("w-full gap-4"):
+                with ui.card().classes("w-full"):
                     ui.label("VERIFICATION RESULT").classes("text-xs text-gray-500")
                     ui.label(label).classes("text-2xl font-bold mt-1")
                     ui.badge(verification.get("result", "—"), color=color)
-                with ui.card().classes("flex-1"):
-                    ui.label("DETAILS").classes("text-xs text-gray-500")
-                    extra = {k: v for k, v in verification.items() if k != "result"}
-                    ui.code(json.dumps(extra, indent=2) if extra else "—").classes("w-full")
+                extra = {k: v for k, v in verification.items() if k != "result"}
+                if extra:
+                    with ui.card().classes("w-full"):
+                        ui.label("DETAILS").classes("text-xs text-gray-500")
+                        ui.code(json.dumps(extra, indent=2)).classes("w-full")
 
         with ui.tab_panel(t_history):
             columns = [
@@ -172,8 +175,11 @@ def select_report(e):
 
 @ui.refreshable
 def report_select():
+    # Show a clean label (strip .json, keep timestamp part)
+    def short_label(fname):
+        return fname.replace("heal_", "").replace(".json", "").replace("Z", " UTC")
     ui.select(
-        {r["_file"]: r["_file"] for r in reports_sorted},
+        {r["_file"]: short_label(r["_file"]) for r in reports_sorted},
         value=state["selected"]["_file"],
         on_change=select_report,
     ).classes("w-full")
@@ -214,8 +220,8 @@ async def run_heal():
 # ---- Layout ----
 with ui.left_drawer().classes("q-pa-md") as drawer:
     ui.label("SETTINGS").classes("text-xs text-gray-500")
-    dark = ui.dark_mode(True)
-    ui.switch("Dark mode", value=True, on_change=lambda e: dark.set_value(e.value))
+    dark = ui.dark_mode(False)
+    ui.switch("Dark mode", value=False, on_change=lambda e: dark.set_value(e.value))
 
     ui.separator().classes("my-3")
     ui.label("REPORT").classes("text-xs text-gray-500")
@@ -229,6 +235,7 @@ with ui.left_drawer().classes("q-pa-md") as drawer:
         trial_options = sorted(
             d for d in os.listdir(sandbox_root)
             if os.path.isdir(os.path.join(sandbox_root, d))
+            and not d.startswith("_")  # exclude __pycache__ and similar
         )
     else:
         trial_options = []
