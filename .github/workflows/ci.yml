@@ -68,10 +68,13 @@ jobs:
       - name: Run pytest
         id: pytest
         run: |
-          # Run pytest; store exit code for the conditional step below.
-          # '|| true' prevents the step from hard-failing so we can branch on outcome.
+          # Disable exit-on-error so a pytest failure doesn't kill the job.
+          # We capture the exit code manually and pass it to subsequent steps.
+          set +e
           python -m pytest demo_sandbox/ -v 2>&1 | tee pytest_output.txt
-          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          PYTEST_EXIT=${PIPESTATUS[0]}
+          set -e
+          echo "exit_code=$PYTEST_EXIT" >> "$GITHUB_OUTPUT"
         shell: bash
 
       # -----------------------------------------------------------------------
